@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Interview Scheduler</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f5f5f4;
+      --bg-tertiary: #f0efed;
+      --bg-success: #f0fdf4;
+      --bg-warning: #fffbeb;
+      --bg-info: #eff6ff;
+      --text-primary: #1c1917;
+      --text-secondary: #78716c;
+      --text-tertiary: #a8a29e;
+      --text-info: #1d4ed8;
+      --text-success: #15803d;
+      --border-tertiary: rgba(0,0,0,0.12);
+      --border-secondary: rgba(0,0,0,0.2);
+      --border-primary: rgba(0,0,0,0.3);
+      --border-success: #bbf7d0;
+      --border-warning: #fde68a;
+      --border-info: #bfdbfe;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1c1917;
+        --bg-secondary: #292524;
+        --bg-tertiary: #1c1917;
+        --bg-success: #052e16;
+        --bg-warning: #1c1008;
+        --bg-info: #1e3a5f;
+        --text-primary: #fafaf9;
+        --text-secondary: #a8a29e;
+        --text-tertiary: #57534e;
+        --text-info: #93c5fd;
+        --text-success: #4ade80;
+        --border-tertiary: rgba(255,255,255,0.1);
+        --border-secondary: rgba(255,255,255,0.18);
+        --border-primary: rgba(255,255,255,0.28);
+        --border-success: #166534;
+        --border-warning: #92400e;
+        --border-info: #1e40af;
+      }
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container { max-width: 700px; margin: 0 auto; }
+
+    input, button, select {
+      font-family: var(--font);
+      font-size: 14px;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 0.5px solid var(--border-secondary);
+      border-radius: var(--radius-md);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+    input:focus { outline: none; border-color: var(--border-primary); }
+
+    .label { font-size: 13px; color: var(--text-secondary); display: block; margin-bottom: 4px; }
+    .err   { font-size: 13px; color: #ef4444; margin-top: 8px; }
+    .hidden { display: none !important; }
+
+    .pill { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
+    .pill-green { background: #16663422; color: #22c55e; border: 0.5px solid #22c55e55; }
+    .pill-red   { background: #7f1d1d22; color: #ef4444;  border: 0.5px solid #ef444440; }
+    .pill-white { background: #ffffff22; color: #fff; }
+
+    .btn-full {
+      width: 100%; padding: 11px;
+      font-size: 14px; font-weight: 500;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border-secondary);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+    .btn-full:disabled { opacity: .6; cursor: not-allowed; }
+    .btn-full:hover:not(:disabled) { background: var(--bg-tertiary); }
+
+    .btn-sm {
+      font-size: 12px; padding: 4px 12px;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border-tertiary);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+    .btn-sm:hover { background: var(--bg-secondary); }
+
+    .tab {
+      font-size: 13px; padding: 6px 16px; cursor: pointer;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border-tertiary);
+      background: transparent;
+      color: var(--text-secondary);
+    }
+    .tab.active {
+      background: var(--bg-secondary);
+      border-color: var(--border-primary);
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .success-card {
+      background: var(--bg-success);
+      border: 0.5px solid var(--border-success);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+    }
+    .warn-card {
+      background: var(--bg-warning);
+      border: 0.5px solid var(--border-warning);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+    }
+    .stat {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+    }
+
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; }
+
+    .slot-btn {
+      padding: 11px 16px; font-size: 13px; width: 100%;
+      border-radius: var(--radius-md);
+      display: flex; justify-content: space-between; align-items: center;
+      transition: all .15s; cursor: pointer; font-family: var(--font);
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+    <span style="font-size:20px;font-weight:500">Interview Scheduler</span>
+    <span id="sync-badge" style="font-size:12px;color:var(--text-secondary)">⟳ Syncing…</span>
+  </div>
+  <p style="font-size:13px;color:var(--text-secondary);margin-bottom:1.25rem">Tue–Fri: 6–10 PM IST · Sat–Sun: 2–7 PM IST</p>
+
+  <div style="display:flex;gap:8px;margin-bottom:1.75rem;flex-wrap:wrap">
+    <button class="tab active" onclick="switchTab('booking',this)">Book a slot</button>
+    <button class="tab" onclick="switchTab('cancel',this)">Cancel / Reschedule</button>
+    <button class="tab" onclick="switchTab('admin',this)">Organizer</button>
+  </div>
+
+  <!-- BOOKING -->
+  <div id="tab-booking">
+    <div id="book-form" style="max-width:560px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem">
+        <div><label class="label">Full name</label><input id="b-name" placeholder="e.g. Priya Sharma"/></div>
+        <div><label class="label">Email</label><input id="b-email" type="email" placeholder="you@email.com"/></div>
+      </div>
+      <label class="label" style="margin-bottom:8px">Select a day</label>
+      <div id="day-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1.25rem"></div>
+      <div id="slot-section" class="hidden">
+        <label class="label" style="margin-bottom:8px">Select a time slot</label>
+        <div id="slot-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.25rem"></div>
+      </div>
+      <div id="b-error" class="err hidden"></div>
+      <button class="btn-full" id="b-confirm" onclick="confirmBooking()">Confirm my slot →</button>
+    </div>
+    <div id="book-done" class="hidden success-card" style="max-width:560px">
+      <div style="font-size:17px;font-weight:500;margin-bottom:6px">✓ Slot confirmed!</div>
+      <p id="done-slot" style="font-size:14px;margin-bottom:4px"></p>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
+        Meeting: <a id="meet-a" href="https://meet.google.com/abc-defg-hij" target="_blank" style="color:var(--text-info)">meet.google.com/abc-defg-hij</a>
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a id="gcal-link" href="#" target="_blank" style="font-size:13px;padding:7px 14px;border-radius:var(--radius-md);background:var(--bg-info);color:var(--text-info);border:0.5px solid var(--border-info);text-decoration:none;font-weight:500">Add to Google Calendar</a>
+        <button class="btn-sm" onclick="dlICS()">Download .ics</button>
+      </div>
+      <button class="btn-sm" style="margin-top:12px" onclick="resetBook()">Book another slot</button>
+    </div>
+  </div>
+
+  <!-- CANCEL -->
+  <div id="tab-cancel" class="hidden" style="max-width:420px">
+    <div id="cancel-form">
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:1rem">Enter your email to cancel your current booking.</p>
+      <label class="label">Your email</label>
+      <input id="c-email" type="email" placeholder="you@email.com" style="margin-bottom:1rem" oninput="lookupCancel()"/>
+      <div id="c-preview" class="hidden" style="font-size:13px;padding:8px 12px;background:var(--bg-secondary);border-radius:var(--radius-md);color:var(--text-secondary);margin-bottom:1rem"></div>
+      <div id="c-error" class="err hidden"></div>
+      <button class="btn-full" style="border-color:#ef4444;color:#ef4444;background:transparent" onclick="doCancel()">Cancel my booking</button>
+    </div>
+    <div id="cancel-done" class="warn-card hidden">
+      <div style="font-size:16px;font-weight:500;margin-bottom:6px">Booking cancelled</div>
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Your slot is now free.</p>
+      <button class="btn-sm" style="color:var(--text-info);border-color:var(--border-info)"
+        onclick="document.getElementById('cancel-done').classList.add('hidden');document.getElementById('cancel-form').classList.remove('hidden');document.getElementById('c-email').value='';document.getElementById('c-preview').classList.add('hidden');switchTab('booking',document.querySelectorAll('.tab')[0])">
+        Book a new slot
+      </button>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="tab-admin" class="hidden">
+    <div id="admin-login" style="max-width:340px">
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:1rem">Organizer access only.</p>
+      <input id="a-pwd" type="password" placeholder="Password" style="margin-bottom:8px" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <div id="a-error" class="err hidden">Incorrect password.</div>
+      <button class="btn-full" style="margin-top:4px" onclick="doLogin()">Login as Organizer</button>
+      <p style="font-size:11px;color:var(--text-tertiary);margin-top:8px">Password: admin123</p>
+    </div>
+    <div id="admin-dash" class="hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px">
+        <span style="font-size:15px;font-weight:500">Organizer Dashboard</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn-sm" style="color:var(--text-info);border-color:var(--border-info)" onclick="syncFromSheet()">↻ Refresh</button>
+          <a href="https://docs.google.com/spreadsheets/d/1oheMh8psZDqNjDg3HXn1IzLDr6crNfrfy4FRFNNa1hA/edit" target="_blank"
+            style="font-size:12px;padding:4px 12px;border-radius:var(--radius-md);border:0.5px solid #22c55e;color:#22c55e;text-decoration:none;background:#16663415">
+            📊 Open Sheet
+          </a>
+          <button class="btn-sm" onclick="doLogout()">Log out</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.75rem">
+        <div class="stat"><div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px">Slots booked</div><div id="stat-booked" style="font-size:22px;font-weight:500">0</div></div>
+        <div class="stat"><div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px">Days covered</div><div id="stat-days"   style="font-size:22px;font-weight:500">0</div></div>
+        <div class="stat"><div style="font-size:12px;color:var(--text-secondary);margin-bottom:4px">Open slots</div>  <div id="stat-open"   style="font-size:22px;font-weight:500">0</div></div>
+      </div>
+      <div style="font-size:14px;font-weight:500;margin-bottom:10px">All Bookings</div>
+      <div style="overflow-x:auto;border:0.5px solid var(--border-tertiary);border-radius:var(--radius-lg);margin-bottom:1.75rem">
+        <table style="min-width:480px;font-size:13px">
+          <thead><tr style="background:var(--bg-secondary)">
+            <th style="padding:9px 12px;border-bottom:0.5px solid var(--border-tertiary);color:var(--text-secondary)">#</th>
+            <th style="padding:9px 12px;border-bottom:0.5px solid var(--border-tertiary);color:var(--text-secondary)">Name</th>
+            <th style="padding:9px 12px;border-bottom:0.5px solid var(--border-tertiary);color:var(--text-secondary)">Email</th>
+            <th style="padding:9px 12px;border-bottom:0.5px solid var(--border-tertiary);color:var(--text-secondary)">Day</th>
+            <th style="padding:9px 12px;border-bottom:0.5px solid var(--border-tertiary);color:var(--text-secondary);white-space:nowrap">Time Slot</th>
+          </tr></thead>
+          <tbody id="admin-tbody"></tbody>
+        </table>
+      </div>
+      <div style="font-size:14px;font-weight:500;margin-bottom:12px">Slot Grid</div>
+      <div id="grid-weekday" style="margin-bottom:1.25rem"></div>
+      <div id="grid-weekend"></div>
+    </div>
+  </div>
+
+</div>
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyACaYKJv4-Ei-8DaSanlE9ihYM7rf0HOoadVrcpWaBjZS3qu8XqDRM-jLuRgtUxD4R/exec";
+const MEET = "https://meet.google.com/abc-defg-hij";
+const DAYS = ["Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const DAY_DATES = {Tuesday:"May 6",Wednesday:"May 7",Thursday:"May 8",Friday:"May 9",Saturday:"May 10",Sunday:"May 11"};
+const DAY_ISO   = {Tuesday:"2025-05-06",Wednesday:"2025-05-07",Thursday:"2025-05-08",Friday:"2025-05-09",Saturday:"2025-05-10",Sunday:"2025-05-11"};
+const WDAY = ["6:00–7:00 PM IST","7:00–8:00 PM IST","8:00–9:00 PM IST","9:00–10:00 PM IST"];
+const WEND = ["2:00–3:00 PM IST","3:00–4:00 PM IST","4:00–5:00 PM IST","5:00–6:00 PM IST","6:00–7:00 PM IST"];
+const SLOT_T = {"6:00–7:00 PM IST":{s:"T12:30:00Z",e:"T13:30:00Z"},"7:00–8:00 PM IST":{s:"T13:30:00Z",e:"T14:30:00Z"},"8:00–9:00 PM IST":{s:"T14:30:00Z",e:"T15:30:00Z"},"9:00–10:00 PM IST":{s:"T15:30:00Z",e:"T16:30:00Z"},"2:00–3:00 PM IST":{s:"T08:30:00Z",e:"T09:30:00Z"},"3:00–4:00 PM IST":{s:"T09:30:00Z",e:"T10:30:00Z"},"4:00–5:00 PM IST":{s:"T10:30:00Z",e:"T11:30:00Z"},"5:00–6:00 PM IST":{s:"T11:30:00Z",e:"T12:30:00Z"}};
+
+let bookings=[],selDay="",selSlot="";
+
+function activeBookings(list){const m={};for(const b of list)m[`${b.day}|${b.slot}`]=b;return Object.values(m).filter(b=>b.status==="Confirmed");}
+function isSlotTaken(d,s){return activeBookings(bookings).some(b=>b.day===d&&b.slot===s);}
+function isEmailBooked(e){return activeBookings(bookings).some(b=>b.email.toLowerCase()===e.toLowerCase());}
+function getByEmail(e){return activeBookings(bookings).find(b=>b.email.toLowerCase()===e.toLowerCase())||null;}
+function getBySlot(d,s){return activeBookings(bookings).find(b=>b.day===d&&b.slot===s)||null;}
+
+async function syncFromSheet(silent=false){
+  if(!silent)setBadge("⟳ Syncing…","var(--text-secondary)");
+  try{
+    const res=await fetch(`${SCRIPT_URL}?action=read&t=${Date.now()}`,{redirect:"follow"});
+    const rows=await res.json();
+    const list=[];
+    for(let i=1;i<rows.length;i++){const[ts,name,email,day,,slot,,status]=rows[i];if(day&&slot)list.push({ts,name,email,day,slot,status});}
+    bookings=list;setBadge("✓ Live","#22c55e");
+    renderDayGrid();renderSlotList();
+    if(!document.getElementById("admin-dash").classList.contains("hidden"))renderAdminDash();
+  }catch{setBadge("⚠ Offline — cached data","#f59e0b");}
+}
+
+async function writeRow(row){try{await fetch(`${SCRIPT_URL}?action=write&data=${encodeURIComponent(JSON.stringify(row))}`,{redirect:"follow"});}catch{}}
+
+function setBadge(t,c){const b=document.getElementById("sync-badge");b.textContent=t;b.style.color=c;}
+
+function switchTab(id,el){
+  ["booking","cancel","admin"].forEach(t=>document.getElementById("tab-"+t).classList.toggle("hidden",t!==id));
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));el.classList.add("active");
+  if(id==="admin"&&!document.getElementById("admin-dash").classList.contains("hidden"))renderAdminDash();
+}
+
+function renderDayGrid(){
+  const g=document.getElementById("day-grid");g.innerHTML="";
+  DAYS.forEach(day=>{
+    const btn=document.createElement("button");
+    const active=selDay===day;
+    btn.style.cssText=`padding:10px 6px;font-size:13px;cursor:pointer;border-radius:var(--radius-md);border:0.5px solid ${active?"#166534":"var(--border-tertiary)"};background:${active?"#166534":"transparent"};color:${active?"#fff":"var(--text-primary)"};font-weight:${active?500:400};transition:all .15s;font-family:var(--font)`;
+    btn.innerHTML=`<div>${day}</div><div style="font-size:11px;opacity:.7;margin-top:2px">${DAY_DATES[day]}</div>`;
+    btn.onclick=()=>{selDay=day;selSlot="";renderDayGrid();document.getElementById("slot-section").classList.remove("hidden");renderSlotList();};
+    g.appendChild(btn);
+  });
+}
+
+function renderSlotList(){
+  if(!selDay)return;
+  const slots=selDay==="Saturday"||selDay==="Sunday"?WEND:WDAY;
+  const c=document.getElementById("slot-list");c.innerHTML="";
+  slots.forEach(slot=>{
+    const booked=isSlotTaken(selDay,slot),picked=selSlot===slot&&!booked;
+    const btn=document.createElement("button");
+    btn.className="slot-btn";
+    btn.style.cssText=`border:0.5px solid ${picked?"#166534":"var(--border-tertiary)"};background:${booked?"var(--bg-secondary)":picked?"#166534":"transparent"};color:${booked?"var(--text-tertiary)":picked?"#fff":"var(--text-primary)"};cursor:${booked?"not-allowed":"pointer"}`;
+    const pill=booked?`<span class="pill pill-red">Booked</span>`:picked?`<span class="pill pill-white">✓ Selected</span>`:`<span class="pill pill-green">Available</span>`;
+    btn.innerHTML=`<span style="font-weight:${picked?500:400}">${slot}</span>${pill}`;
+    if(!booked)btn.onclick=()=>{selSlot=slot;renderSlotList();};
+    c.appendChild(btn);
+  });
+}
+
+async function confirmBooking(){
+  const name=document.getElementById("b-name").value.trim();
+  const email=document.getElementById("b-email").value.trim();
+  const err=document.getElementById("b-error");err.classList.add("hidden");
+  if(!name||!email||!selDay||!selSlot){showErr(err,"Please fill in all fields and select a slot.");return;}
+  const btn=document.getElementById("b-confirm");btn.disabled=true;btn.textContent="Verifying & saving…";
+  await syncFromSheet(true);
+  if(isEmailBooked(email)){showErr(err,"This email already has a booking. Use Cancel/Reschedule to change it.");btn.disabled=false;btn.textContent="Confirm my slot →";return;}
+  if(isSlotTaken(selDay,selSlot)){showErr(err,"This slot was just taken — please choose another.");selSlot="";renderSlotList();btn.disabled=false;btn.textContent="Confirm my slot →";return;}
+  const ts=new Date().toLocaleString("en-IN",{timeZone:"Asia/Kolkata"});
+  bookings.push({ts,name,email,day:selDay,slot:selSlot,status:"Confirmed"});
+  await writeRow([ts,name,email,selDay,DAY_DATES[selDay],selSlot,MEET,"Confirmed"]);
+  const t=SLOT_T[selSlot],d=DAY_ISO[selDay],fmt=s=>s.replace(/[-:T]/g,"");
+  document.getElementById("done-slot").textContent=`${selDay}, ${DAY_DATES[selDay]} · ${selSlot}`;
+  document.getElementById("gcal-link").href=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent("Interview – "+name)}&dates=${fmt(d+t.s)}/${fmt(d+t.e)}&location=${encodeURIComponent(MEET)}`;
+  window._ics={day:selDay,slot:selSlot,name};
+  document.getElementById("book-form").classList.add("hidden");document.getElementById("book-done").classList.remove("hidden");
+  btn.disabled=false;btn.textContent="Confirm my slot →";
+}
+
+function dlICS(){
+  const{day,slot,name}=window._ics,d=DAY_ISO[day],t=SLOT_T[slot],fmt=s=>s.replace(/[-:T]/g,"");
+  const ics=`BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nUID:iv-${day}-${slot}@sched\nDTSTART:${fmt(d+t.s)}\nDTEND:${fmt(d+t.e)}\nSUMMARY:Interview – ${name}\nLOCATION:${MEET}\nEND:VEVENT\nEND:VCALENDAR`;
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([ics],{type:"text/calendar"}));a.download=`interview-${day}.ics`;a.click();
+}
+
+function resetBook(){selDay="";selSlot="";document.getElementById("b-name").value="";document.getElementById("b-email").value="";document.getElementById("book-form").classList.remove("hidden");document.getElementById("book-done").classList.add("hidden");document.getElementById("slot-section").classList.add("hidden");renderDayGrid();}
+
+function lookupCancel(){
+  const email=document.getElementById("c-email").value.trim();
+  const pre=document.getElementById("c-preview");const b=getByEmail(email);
+  if(b){pre.innerHTML=`Current booking: <strong style="color:var(--text-primary)">${b.day}, ${DAY_DATES[b.day]} · ${b.slot}</strong>`;pre.classList.remove("hidden");}
+  else pre.classList.add("hidden");
+}
+
+async function doCancel(){
+  const email=document.getElementById("c-email").value.trim();
+  const err=document.getElementById("c-error");err.classList.add("hidden");
+  await syncFromSheet(true);
+  const b=getByEmail(email);
+  if(!b){showErr(err,"No booking found for this email.");return;}
+  const ts=new Date().toLocaleString("en-IN",{timeZone:"Asia/Kolkata"});
+  bookings.push({ts,name:b.name,email:b.email,day:b.day,slot:b.slot,status:"Cancelled"});
+  await writeRow([ts,b.name,b.email,b.day,DAY_DATES[b.day]||"",b.slot,"","Cancelled"]);
+  document.getElementById("cancel-form").classList.add("hidden");document.getElementById("cancel-done").classList.remove("hidden");
+}
+
+function doLogin(){
+  const pwd=document.getElementById("a-pwd").value;const err=document.getElementById("a-error");
+  if(pwd==="admin123"){err.classList.add("hidden");document.getElementById("admin-login").classList.add("hidden");document.getElementById("admin-dash").classList.remove("hidden");renderAdminDash();syncFromSheet();}
+  else err.classList.remove("hidden");
+}
+
+function doLogout(){document.getElementById("admin-login").classList.remove("hidden");document.getElementById("admin-dash").classList.add("hidden");document.getElementById("a-pwd").value="";}
+
+function renderAdminDash(){
+  const active=activeBookings(bookings);
+  document.getElementById("stat-booked").textContent=active.length;
+  document.getElementById("stat-days").textContent=new Set(active.map(b=>b.day)).size;
+  const total=DAYS.reduce((s,d)=>s+(d==="Saturday"||d==="Sunday"?5:4),0);
+  document.getElementById("stat-open").textContent=total-active.length;
+  const tbody=document.getElementById("admin-tbody");tbody.innerHTML="";
+  if(!active.length){tbody.innerHTML=`<tr><td colspan="5" style="padding:16px;font-size:13px;color:var(--text-secondary)">No bookings yet.</td></tr>`;}
+  else{[...active].sort((a,b)=>DAYS.indexOf(a.day)-DAYS.indexOf(b.day)).forEach((b,i)=>{const tr=document.createElement("tr");tr.style.borderBottom=i<active.length-1?"0.5px solid var(--border-tertiary)":"none";tr.innerHTML=`<td style="padding:9px 12px;color:var(--text-tertiary)">${i+1}</td><td style="padding:9px 12px;font-weight:500">${b.name}</td><td style="padding:9px 12px;color:var(--text-secondary)">${b.email}</td><td style="padding:9px 12px">${b.day}</td><td style="padding:9px 12px;white-space:nowrap">${b.slot}</td>`;tbody.appendChild(tr);});}
+  renderSlotGrid("grid-weekday","Weekdays (Tue–Fri)",DAYS.slice(0,4),WDAY);
+  renderSlotGrid("grid-weekend","Weekend (Sat–Sun)",DAYS.slice(4),WEND);
+}
+
+function renderSlotGrid(id,title,days,slots){
+  const wrap=document.getElementById(id);wrap.innerHTML=`<div style="font-size:13px;font-weight:500;color:var(--text-secondary);margin-bottom:8px">${title}</div>`;
+  const tw=document.createElement("div");tw.style.cssText="overflow-x:auto;border:0.5px solid var(--border-tertiary);border-radius:var(--radius-lg);margin-bottom:1.25rem";
+  const tbl=document.createElement("table");tbl.style.minWidth="360px";tbl.style.fontSize="12px";
+  let h=`<thead><tr style="background:var(--bg-secondary)"><th style="padding:7px 10px;font-weight:500;border-bottom:0.5px solid var(--border-tertiary);color:var(--text-secondary);min-width:110px">Slot</th>`;
+  days.forEach(d=>{h+=`<th style="text-align:center;padding:7px 8px;font-weight:500;border-bottom:0.5px solid var(--border-tertiary);color:var(--text-secondary);white-space:nowrap">${d.slice(0,3)}<br><span style="font-size:10px;font-weight:400">${DAY_DATES[d]}</span></th>`;});
+  h+="</tr></thead><tbody>";
+  slots.forEach((slot,si)=>{
+    h+=`<tr style="border-bottom:${si<slots.length-1?"0.5px solid var(--border-tertiary)":"none"}"><td style="padding:8px 10px;color:var(--text-secondary);white-space:nowrap">${slot}</td>`;
+    days.forEach(day=>{const b=getBySlot(day,slot);h+=`<td style="text-align:center;padding:8px">${b?`<div style="display:flex;flex-direction:column;align-items:center;gap:2px"><span style="background:#16663422;color:#22c55e;font-size:11px;padding:2px 8px;border-radius:4px;font-weight:500">${b.name.split(" ")[0]}</span><span style="font-size:10px;color:var(--text-tertiary)">${b.email}</span></div>`:`<span style="font-size:11px;color:var(--text-tertiary)">—</span>`}</td>`;});
+    h+="</tr>";
+  });
+  tbl.innerHTML=h+"</tbody>";tw.appendChild(tbl);wrap.appendChild(tw);
+}
+
+function showErr(el,msg){el.textContent=msg;el.classList.remove("hidden");}
+
+renderDayGrid();
+syncFromSheet();
+setInterval(()=>syncFromSheet(true),20000);
+</script>
+</body>
+</html>
